@@ -721,7 +721,7 @@ window.doExportAccount = () => {
   // Show in a small prompt-style modal via confirm (reuse confirm overlay as info)
   document.getElementById("confirm-icon").textContent  = "📤";
   document.getElementById("confirm-title").textContent = "โค้ดบัญชีของคุณ";
-  document.getElementById("confirm-msg").textContent   = "Copy โค้ดด้านล่างไปวางที่เครื่องใหม่ผ่านปุ่ม "นำเข้าจากเครื่องอื่น"";
+  document.getElementById("confirm-msg").textContent   = "Copy โค้ดด้านล่างไปวางที่เครื่องใหม่ ผ่านปุ่ม นำเข้าจากเครื่องอื่น";
 
   // Inject a textarea inside confirm-msg temporarily
   const ta = document.createElement("textarea");
