@@ -1,5 +1,5 @@
 // ── Firebase SDK (ESM) ──────────────────────────────────────────────
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp, getApps, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc,
   doc, onSnapshot, query, orderBy
@@ -33,6 +33,7 @@ let db = null;
 let unsubscribe = null;
 let allItems = [];
 let editId = null;
+let currentUser = null; // { username, collection }
 
 const now = new Date();
 let curMonth = now.getMonth();
@@ -45,57 +46,218 @@ function applyTheme(theme) {
   if (!THEMES.includes(theme)) theme = "warm";
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem("app_theme", theme);
-  // Update active button
   THEMES.forEach(t => {
     const btn = document.getElementById("theme-" + t);
     if (btn) btn.classList.toggle("active", t === theme);
   });
 }
-
 window.setTheme = (theme) => applyTheme(theme);
 
-// ── Config helpers ───────────────────────────────────────────────────
-function getConfig() {
-  try { return JSON.parse(localStorage.getItem("fb_config") || "null"); }
-  catch { return null; }
+// ── Password visibility toggle ───────────────────────────────────────
+window.togglePw = (inputId, btn) => {
+  const input = document.getElementById(inputId);
+  if (input.type === "password") {
+    input.type = "text";
+    btn.textContent = "🙈";
+  } else {
+    input.type = "password";
+    btn.textContent = "👁";
+  }
+};
+
+// ── Screen navigation ────────────────────────────────────────────────
+window.showScreen = (name) => {
+  ["login-screen", "register-screen", "pin-screen"].forEach(id => {
+    document.getElementById(id).classList.add("hidden");
+  });
+  document.getElementById(name + "-screen").classList.remove("hidden");
+  // clear errors
+  ["login-error","reg-error","pin-error"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.add("hidden"); el.textContent = ""; }
+  });
+};
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.remove("hidden");
 }
 
-window.saveConfig = () => {
-  const cfg = {
-    apiKey:    document.getElementById("cfg-apiKey").value.trim(),
-    projectId: document.getElementById("cfg-projectId").value.trim(),
-    appId:     document.getElementById("cfg-appId").value.trim(),
-  };
-  if (!cfg.apiKey || !cfg.projectId || !cfg.appId) {
-    showToast("กรุณากรอกข้อมูลให้ครบ"); return;
+// ── User storage helpers ─────────────────────────────────────────────
+// Users stored as: users_db = { username: { passwordHash, pin, apiKey, projectId, appId } }
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem("app_users") || "{}"); }
+  catch { return {}; }
+}
+function saveUsers(users) {
+  localStorage.setItem("app_users", JSON.stringify(users));
+}
+
+// Simple hash (not cryptographic — just obfuscation for localStorage)
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
   }
-  localStorage.setItem("fb_config", JSON.stringify(cfg));
-  location.reload();
+  return hash.toString(36);
+}
+
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem("app_session") || "null"); }
+  catch { return null; }
+}
+function saveSession(username) {
+  sessionStorage.setItem("app_session", JSON.stringify({ username }));
+}
+function clearSession() {
+  sessionStorage.removeItem("app_session");
+}
+
+// ── Auth: Register ───────────────────────────────────────────────────
+window.doRegister = () => {
+  const username  = document.getElementById("reg-username").value.trim().toLowerCase();
+  const password  = document.getElementById("reg-password").value;
+  const pin       = document.getElementById("reg-pin").value.trim();
+  const apiKey    = document.getElementById("reg-apiKey").value.trim();
+  const projectId = document.getElementById("reg-projectId").value.trim();
+  const appId     = document.getElementById("reg-appId").value.trim();
+
+  if (!username)            return showError("reg-error", "กรุณากรอก username");
+  if (username.length < 3)  return showError("reg-error", "username ต้องมีอย่างน้อย 3 ตัวอักษร");
+  if (password.length < 4)  return showError("reg-error", "password ต้องมีอย่างน้อย 4 ตัวอักษร");
+  if (!/^\d{4}$/.test(pin)) return showError("reg-error", "PIN ต้องเป็นตัวเลข 4 หลักเท่านั้น");
+  if (!apiKey || !projectId || !appId)
+                            return showError("reg-error", "กรุณากรอก Firebase Config ให้ครบ");
+
+  const users = getUsers();
+  if (users[username])      return showError("reg-error", "username นี้มีอยู่แล้ว");
+
+  users[username] = {
+    passwordHash: simpleHash(password),
+    pin,
+    apiKey,
+    projectId,
+    appId,
+  };
+  saveUsers(users);
+  showToast("สมัครสมาชิกสำเร็จ! กรุณา login");
+  showScreen("login");
+  document.getElementById("login-username").value = username;
 };
 
-window.resetConfig = () => {
-  if (!confirm("ลบ Config ออก? (ข้อมูลใน Firestore จะยังอยู่)")) return;
-  localStorage.removeItem("fb_config");
-  location.reload();
+// ── Auth: Login ──────────────────────────────────────────────────────
+window.doLogin = () => {
+  const username = document.getElementById("login-username").value.trim().toLowerCase();
+  const password = document.getElementById("login-password").value;
+
+  if (!username || !password) return showError("login-error", "กรุณากรอก username และ password");
+
+  const users = getUsers();
+  const user  = users[username];
+
+  if (!user)                              return showError("login-error", "ไม่พบ username นี้");
+  if (user.passwordHash !== simpleHash(password))
+                                          return showError("login-error", "password ไม่ถูกต้อง");
+
+  saveSession(username);
+  startApp(username, user);
 };
 
-window.updateConfig = () => {
-  const cfg = {
-    apiKey:    document.getElementById("s-apiKey").value.trim(),
-    projectId: document.getElementById("s-projectId").value.trim(),
-    appId:     document.getElementById("s-appId").value.trim(),
-  };
-  if (!cfg.apiKey || !cfg.projectId || !cfg.appId) {
-    showToast("กรุณากรอกข้อมูลให้ครบ"); return;
+// ── Auth: Forgot PIN ─────────────────────────────────────────────────
+let pinVerified = false;
+
+window.doVerifyPin = () => {
+  const username = document.getElementById("pin-username").value.trim().toLowerCase();
+  const pinInput = document.getElementById("pin-code").value.trim();
+
+  const users = getUsers();
+  const user  = users[username];
+
+  if (!user)               return showError("pin-error", "ไม่พบ username นี้");
+
+  if (!pinVerified) {
+    if (user.pin !== pinInput) return showError("pin-error", "PIN ไม่ถูกต้อง");
+    // PIN correct — show new password field
+    pinVerified = true;
+    document.getElementById("new-pw-group").classList.remove("hidden");
+    document.getElementById("pin-btn").textContent = "ตั้ง Password ใหม่";
+    document.getElementById("pin-error").classList.add("hidden");
+    showToast("PIN ถูกต้อง! ตั้ง password ใหม่ได้เลย");
+    return;
   }
-  localStorage.setItem("fb_config", JSON.stringify(cfg));
-  showToast("บันทึก Config แล้ว");
-  toggleSettings();
-  location.reload();
+
+  // Set new password
+  const newPw = document.getElementById("pin-new-pw").value;
+  if (newPw.length < 4) return showError("pin-error", "password ต้องมีอย่างน้อย 4 ตัวอักษร");
+
+  users[username].passwordHash = simpleHash(newPw);
+  saveUsers(users);
+  pinVerified = false;
+  document.getElementById("new-pw-group").classList.add("hidden");
+  document.getElementById("pin-btn").textContent = "ยืนยัน PIN";
+  showToast("เปลี่ยน password สำเร็จ! กรุณา login");
+  showScreen("login");
+  document.getElementById("login-username").value = username;
 };
+
+// ── Auth: Logout ─────────────────────────────────────────────────────
+window.doLogout = () => {
+  if (!confirm("ออกจากระบบ?")) return;
+  clearSession();
+  if (unsubscribe) unsubscribe();
+  // Clean up firebase apps
+  getApps().forEach(a => deleteApp(a));
+  db = null; allItems = []; currentUser = null;
+  document.getElementById("main-app").classList.add("hidden");
+  toggleSettings(); // close panel if open
+  showScreen("login");
+};
+
+// ── Start app after login ────────────────────────────────────────────
+function startApp(username, user) {
+  currentUser = { username, collection: "expenses_" + username };
+
+  try {
+    // Clean up existing Firebase apps
+    getApps().forEach(a => deleteApp(a));
+
+    initFirebaseWith({
+      apiKey:    user.apiKey,
+      projectId: user.projectId,
+      appId:     user.appId,
+    });
+
+    // Hide auth, show main
+    ["login-screen","register-screen","pin-screen"].forEach(id => {
+      document.getElementById(id).classList.add("hidden");
+    });
+    document.getElementById("main-app").classList.remove("hidden");
+
+    // Update settings display
+    document.getElementById("settings-username").textContent = username;
+    document.getElementById("cfg-display-apiKey").textContent    = user.apiKey.slice(0,12) + "...";
+    document.getElementById("cfg-display-projectId").textContent = user.projectId;
+    document.getElementById("cfg-display-appId").textContent     = user.appId.slice(0,18) + "...";
+    document.getElementById("sync-user").textContent             = "👤 " + username;
+
+    startListener();
+    setSyncStatus("🟡 กำลังเชื่อมต่อ...");
+
+    // Apply saved theme
+    const savedTheme = localStorage.getItem("app_theme") || "warm";
+    applyTheme(savedTheme);
+
+  } catch (e) {
+    console.error(e);
+    showScreen("login");
+    showError("login-error", "Firebase error: " + e.message);
+  }
+}
 
 // ── Firebase init ────────────────────────────────────────────────────
-function initFirebase(cfg) {
+function initFirebaseWith(cfg) {
   const app = initializeApp({
     apiKey:            cfg.apiKey,
     authDomain:        `${cfg.projectId}.firebaseapp.com`,
@@ -109,7 +271,9 @@ function initFirebase(cfg) {
 
 // ── Realtime listener ────────────────────────────────────────────────
 function startListener() {
-  const q = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
+  if (unsubscribe) unsubscribe();
+  const col = currentUser.collection;
+  const q = query(collection(db, col), orderBy("createdAt", "desc"));
   unsubscribe = onSnapshot(q,
     (snap) => {
       allItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -126,16 +290,16 @@ function startListener() {
 // ── CRUD ─────────────────────────────────────────────────────────────
 async function addItem(data) {
   data.createdAt = Date.now();
-  await addDoc(collection(db, "expenses"), data);
+  await addDoc(collection(db, currentUser.collection), data);
 }
 
 async function updateItem(id, data) {
-  await updateDoc(doc(db, "expenses", id), data);
+  await updateDoc(doc(db, currentUser.collection, id), data);
 }
 
 window.deleteItem = async (id) => {
   if (!confirm("ลบรายการนี้?")) return;
-  await deleteDoc(doc(db, "expenses", id));
+  await deleteDoc(doc(db, currentUser.collection, id));
   showToast("ลบแล้ว");
 };
 
@@ -279,25 +443,20 @@ function buildRangePickers() {
       `<option value="${y}" ${y === curYear ? "selected":""}>${y + 543}</option>`
     ).join("");
   });
-  // defaults: from = 2026-04 (index 3), to = 2027-03 (index 2, year 2027)
-  document.getElementById("r-from-month").value = "4"; // May 2026
-  document.getElementById("r-from-year").value  = "2026";
-  document.getElementById("r-to-month").value   = "3"; // April 2027
-  document.getElementById("r-to-year").value    = "2027";
+  document.getElementById("r-from-month").value = String(curMonth);
+  document.getElementById("r-from-year").value  = String(curYear);
+  document.getElementById("r-to-month").value   = String(curMonth);
+  document.getElementById("r-to-year").value    = String(curYear + 1);
 }
 
 window.onModeChange = function() {
   const mode = document.querySelector('input[name="add-mode"]:checked').value;
-  // Update selected style
   document.querySelectorAll(".mode-option").forEach(el => {
     const radio = el.querySelector("input[type=radio]");
     el.classList.toggle("selected", radio && radio.checked);
   });
-  // Show/hide range picker
   document.getElementById("range-picker").classList.toggle("hidden", mode !== "range");
-  // Show/hide single-month fields
   document.getElementById("single-month-fields").classList.toggle("hidden", mode !== "single");
-  // Update save button text
   const texts = { single: "บันทึก", year: "เพิ่ม 12 เดือน", range: "เพิ่มตามช่วง" };
   document.getElementById("save-btn").textContent = texts[mode] || "บันทึก";
 };
@@ -311,7 +470,6 @@ window.openModal = (id = null) => {
   document.getElementById("add-mode-section").classList.toggle("hidden", isEdit);
   document.getElementById("single-month-fields").classList.remove("hidden");
 
-  // Reset radio to single when adding
   if (!isEdit) {
     const radios = document.querySelectorAll('input[name="add-mode"]');
     radios.forEach(r => r.checked = r.value === "single");
@@ -326,13 +484,11 @@ window.openModal = (id = null) => {
     document.getElementById("save-btn").textContent = "บันทึก";
   }
 
-  // Cat options
   const catSel = document.getElementById("f-cat");
   catSel.innerHTML = CATS.map(c =>
     `<option value="${c.name}" ${item && item.cat === c.name ? "selected":""}>${c.icon} ${c.name}</option>`
   ).join("");
 
-  // Month options
   const mSel = document.getElementById("f-month");
   mSel.innerHTML = TH_MONTHS.map((m, i) =>
     `<option value="${i}" ${(item ? item.month : curMonth) === i ? "selected":""}>${m}</option>`
@@ -366,7 +522,6 @@ window.saveItem = async () => {
   if (isNaN(amount) || amount <= 0) { showToast("กรุณากรอกจำนวนเงิน"); return; }
 
   if (editId) {
-    // Edit existing — single item
     const month  = parseInt(document.getElementById("f-month").value);
     const yearBE = parseInt(document.getElementById("f-year").value) || (curYear + 543);
     const year   = yearBE - 543;
@@ -378,9 +533,8 @@ window.saveItem = async () => {
     return;
   }
 
-  // Determine which months to add
   const mode = document.querySelector('input[name="add-mode"]:checked')?.value || "single";
-  let monthList = []; // [{month, year}]
+  let monthList = [];
 
   if (mode === "single") {
     const month  = parseInt(document.getElementById("f-month").value);
@@ -419,13 +573,8 @@ window.saveItem = async () => {
 window.toggleSettings = () => {
   const panel   = document.getElementById("settings-panel");
   const overlay = document.getElementById("settings-overlay");
-  const cfg = getConfig() || {};
-  document.getElementById("s-apiKey").value    = cfg.apiKey    || "";
-  document.getElementById("s-projectId").value = cfg.projectId || "";
-  document.getElementById("s-appId").value     = cfg.appId     || "";
   panel.classList.toggle("hidden");
   overlay.classList.toggle("hidden");
-  // Refresh active theme button
   const theme = localStorage.getItem("app_theme") || "warm";
   THEMES.forEach(t => {
     const btn = document.getElementById("theme-" + t);
@@ -445,48 +594,29 @@ window.exportData = () => {
 };
 
 // ── Export Excel ─────────────────────────────────────────────────────
-function buildExcelMonth(items, month, year, sheetName) {
+function buildExcelMonth(items, month, year) {
   const monthTH = TH_MONTHS[month] + " " + (year + 543);
-
-  // Summary rows
   const total  = items.reduce((s, i) => s + (i.amount || 0), 0);
   const paid   = items.filter(i => i.paid).reduce((s, i) => s + (i.amount || 0), 0);
   const unpaid = total - paid;
-
   const headers = ["#", "ชื่อรายการ", "หมวดหมู่", "จำนวนเงิน (฿)", "วันที่ครบกำหนด", "สถานะ", "หมายเหตุ"];
-
   const rows = items.map((item, idx) => [
-    idx + 1,
-    item.name || "",
+    idx + 1, item.name || "",
     (catInfo(item.cat).icon + " " + item.cat) || "",
-    item.amount || 0,
-    item.due || "",
+    item.amount || 0, item.due || "",
     item.paid ? "จ่ายแล้ว" : "ค้างจ่าย",
     item.note || ""
   ]);
-
-  // Build worksheet data
   const wsData = [
-    [`รายงานรายจ่าย — ${monthTH}`],
-    [],
+    [`รายงานรายจ่าย — ${monthTH}`], [],
     ["รายจ่ายทั้งหมด", total, "", "จ่ายแล้ว", paid, "", "ค้างจ่าย", unpaid],
-    [],
-    headers,
-    ...rows,
-    [],
+    [], headers, ...rows, [],
     ["", "", "รวมทั้งหมด", total, "", "", ""],
     ["", "", "จ่ายแล้ว", paid, "", "", ""],
     ["", "", "ค้างจ่าย", unpaid, "", "", ""],
   ];
-
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // Column widths
-  ws["!cols"] = [
-    { wch: 5 }, { wch: 28 }, { wch: 18 }, { wch: 16 },
-    { wch: 14 }, { wch: 12 }, { wch: 22 }
-  ];
-
+  ws["!cols"] = [{ wch: 5 }, { wch: 28 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 22 }];
   return ws;
 }
 
@@ -494,10 +624,8 @@ window.exportExcel = () => {
   if (typeof XLSX === "undefined") { showToast("กำลังโหลด SheetJS..."); return; }
   const items = getMonthItems().sort((a, b) => (a.due || 0) - (b.due || 0));
   if (!items.length) { showToast("ไม่มีรายการในเดือนนี้"); return; }
-
   const wb = XLSX.utils.book_new();
-  const ws = buildExcelMonth(items, curMonth, curYear, "รายการ");
-  XLSX.utils.book_append_sheet(wb, ws, TH_MONTHS_SHORT[curMonth] + (curYear + 543));
+  XLSX.utils.book_append_sheet(wb, buildExcelMonth(items, curMonth, curYear), TH_MONTHS_SHORT[curMonth] + (curYear + 543));
   XLSX.writeFile(wb, `รายจ่าย_${TH_MONTHS[curMonth]}_${curYear + 543}.xlsx`);
   showToast("Export Excel แล้ว ✓");
 };
@@ -506,43 +634,28 @@ window.exportExcelYear = () => {
   if (typeof XLSX === "undefined") { showToast("กำลังโหลด SheetJS..."); return; }
   const wb = XLSX.utils.book_new();
   let hasAny = false;
-
-  // Summary sheet
   const summaryRows = [
-    [`สรุปรายจ่ายประจำปี ${curYear + 543}`],
-    [],
+    [`สรุปรายจ่ายประจำปี ${curYear + 543}`], [],
     ["เดือน", "รายจ่ายทั้งหมด (฿)", "จ่ายแล้ว (฿)", "ค้างจ่าย (฿)", "จำนวนรายการ"],
   ];
   let grandTotal = 0, grandPaid = 0, grandUnpaid = 0, grandCount = 0;
-
   for (let m = 0; m < 12; m++) {
-    const monthItems = allItems.filter(i => i.month === m && i.year === curYear)
-                               .sort((a, b) => (a.due||0) - (b.due||0));
+    const monthItems = allItems.filter(i => i.month === m && i.year === curYear).sort((a, b) => (a.due||0) - (b.due||0));
     const total  = monthItems.reduce((s, i) => s + (i.amount || 0), 0);
     const paid   = monthItems.filter(i => i.paid).reduce((s, i) => s + (i.amount || 0), 0);
     const unpaid = total - paid;
     summaryRows.push([TH_MONTHS[m] + " " + (curYear + 543), total, paid, unpaid, monthItems.length]);
-    grandTotal  += total;
-    grandPaid   += paid;
-    grandUnpaid += unpaid;
-    grandCount  += monthItems.length;
-
+    grandTotal += total; grandPaid += paid; grandUnpaid += unpaid; grandCount += monthItems.length;
     if (monthItems.length) {
       hasAny = true;
-      const ws = buildExcelMonth(monthItems, m, curYear);
-      XLSX.utils.book_append_sheet(wb, ws, TH_MONTHS_SHORT[m]);
+      XLSX.utils.book_append_sheet(wb, buildExcelMonth(monthItems, m, curYear), TH_MONTHS_SHORT[m]);
     }
   }
-  summaryRows.push([]);
-  summaryRows.push(["รวมทั้งปี", grandTotal, grandPaid, grandUnpaid, grandCount]);
-
+  summaryRows.push([], ["รวมทั้งปี", grandTotal, grandPaid, grandUnpaid, grandCount]);
   if (!hasAny) { showToast("ไม่มีข้อมูลในปีนี้"); return; }
-
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
   wsSummary["!cols"] = [{ wch: 22 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 14 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, "สรุปทั้งปี");
-
-  // Move summary to first
   wb.SheetNames = ["สรุปทั้งปี", ...wb.SheetNames.filter(n => n !== "สรุปทั้งปี")];
   XLSX.writeFile(wb, `รายจ่าย_${curYear + 543}.xlsx`);
   showToast("Export Excel ทั้งปีแล้ว ✓");
@@ -561,29 +674,24 @@ function showToast(msg) {
   window._toastTimer = setTimeout(() => t.classList.add("hidden"), 2800);
 }
 
-
 // ── Boot ──────────────────────────────────────────────────────────────
 (function boot() {
-  // Apply saved theme
   const savedTheme = localStorage.getItem("app_theme") || "warm";
   applyTheme(savedTheme);
 
-  const cfg = getConfig();
-  if (!cfg) {
-    document.getElementById("loading-screen").classList.add("hidden");
-    document.getElementById("setup-screen").classList.remove("hidden");
-    return;
+  document.getElementById("loading-screen").classList.add("hidden");
+
+  // Check session
+  const session = getSession();
+  if (session) {
+    const users = getUsers();
+    const user  = users[session.username];
+    if (user) {
+      startApp(session.username, user);
+      return;
+    }
   }
 
-  try {
-    initFirebase(cfg);
-    document.getElementById("loading-screen").classList.add("hidden");
-    document.getElementById("main-app").classList.remove("hidden");
-    startListener();
-    setSyncStatus("🟡 กำลังเชื่อมต่อ...");
-  } catch (e) {
-    document.getElementById("loading-screen").classList.add("hidden");
-    document.getElementById("setup-screen").classList.remove("hidden");
-    console.error(e);
-  }
+  // No session → show login
+  showScreen("login");
 })();

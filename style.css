@@ -564,3 +564,99 @@ body {
   .modal-body { padding: 1rem; }
   .modal-footer { padding: 1rem; }
 }
+
+/* ══ AUTH SCREENS ════════════════════════════════════════════════════ */
+.auth-screen {
+  min-height: 100vh; display: flex;
+  align-items: center; justify-content: center;
+  padding: 1.5rem; background: var(--bg);
+}
+.auth-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 2.5rem; max-width: 460px; width: 100%;
+  box-shadow: var(--shadow-md); text-align: center;
+}
+.auth-logo { font-size: 52px; margin-bottom: 14px; }
+.auth-card h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+.auth-card > p { color: var(--text-muted); font-size: 14px; margin-bottom: 1.75rem; }
+.auth-card .form-group { text-align: left; }
+
+.auth-error {
+  background: var(--red-bg); color: var(--red);
+  border: 1px solid var(--red); border-radius: var(--radius-sm);
+  padding: 9px 12px; font-size: 13px; margin-bottom: 8px;
+  text-align: left;
+}
+
+.auth-switch {
+  margin-top: 16px; font-size: 13px; color: var(--text-muted);
+}
+.auth-switch a {
+  color: var(--accent); text-decoration: none; font-weight: 600;
+}
+.auth-switch a:hover { text-decoration: underline; }
+
+/* Input with eye button */
+.input-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.input-wrap input {
+  width: 100%; padding-right: 40px;
+}
+.eye-btn {
+  position: absolute; right: 8px;
+  background: transparent; border: none;
+  cursor: pointer; font-size: 16px; padding: 4px;
+  color: var(--text-muted); line-height: 1;
+}
+
+/* Section divider */
+.section-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 1.25rem 0 1rem; text-align: left;
+}
+.section-divider::before, .section-divider::after {
+  content: ""; flex: 1; height: 1px; background: var(--border);
+}
+.section-divider span {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap;
+}
+
+/* Config readonly display */
+.cfg-readonly {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+}
+.cfg-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 5px 0; font-size: 13px;
+}
+.cfg-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+.cfg-row span { color: var(--text-muted); font-size: 12px; }
+.cfg-row code {
+  background: transparent; color: var(--accent);
+  font-size: 12px; word-break: break-all; text-align: right;
+}
+
+/* User info box */
+.user-info-box { text-align: left; }
+.user-info-name {
+  font-size: 16px; font-weight: 700;
+  padding: 8px 0; color: var(--text);
+}
+.user-info-name::before { content: "👤 "; }
+
+/* Sync bar user */
+.sync-user {
+  margin-left: 8px; font-weight: 600; color: var(--accent);
+}
+
+/* Register screen scrollable on small screens */
+#register-screen .auth-card {
+  max-height: 90vh; overflow-y: auto;
+}
+
+/* btn danger */
+.btn-outline.danger { color: var(--red); border-color: var(--red); }
+.btn-outline.danger:hover { background: var(--red-bg); }

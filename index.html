@@ -10,36 +10,120 @@
 </head>
 <body>
   <div id="app">
+
     <!-- Loading -->
     <div id="loading-screen" class="loading-screen">
       <div class="loading-logo">💰</div>
       <div class="loading-text">กำลังโหลด...</div>
     </div>
 
-    <!-- Setup Screen -->
-    <div id="setup-screen" class="setup-screen hidden">
-      <div class="setup-card">
-        <div class="setup-emoji">🔥</div>
-        <h1>ตั้งค่า Firebase</h1>
-        <p>กรอก Firebase Config เพื่อเชื่อมต่อฐานข้อมูล<br>ดูวิธีได้ใน <code>README.md</code></p>
+    <!-- ══ AUTH SCREENS ══════════════════════════════════════════════ -->
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="auth-screen hidden">
+      <div class="auth-card">
+        <div class="auth-logo">💰</div>
+        <h1>เข้าสู่ระบบ</h1>
+        <p>รายจ่ายประจำเดือน</p>
+
         <div class="form-group">
-          <label>API Key</label>
-          <input id="cfg-apiKey" type="text" placeholder="AIzaSy...">
+          <label>Username</label>
+          <input id="login-username" type="text" placeholder="กรอก username" autocomplete="username">
         </div>
         <div class="form-group">
-          <label>Project ID</label>
-          <input id="cfg-projectId" type="text" placeholder="my-project-12345">
+          <label>Password</label>
+          <div class="input-wrap">
+            <input id="login-password" type="password" placeholder="กรอก password" autocomplete="current-password">
+            <button class="eye-btn" type="button" onclick="togglePw('login-password', this)">👁</button>
+          </div>
         </div>
-        <div class="form-group">
-          <label>App ID</label>
-          <input id="cfg-appId" type="text" placeholder="1:123456:web:abc123">
+        <div id="login-error" class="auth-error hidden"></div>
+        <button class="btn-primary" onclick="doLogin()">เข้าสู่ระบบ</button>
+        <div class="auth-switch">
+          ยังไม่มีบัญชี? <a href="#" onclick="showScreen('register')">สมัครสมาชิก</a>
         </div>
-        <button class="btn-primary" onclick="saveConfig()">เชื่อมต่อ Firebase</button>
-        <p class="setup-hint">ข้อมูล config จะเก็บในเครื่องของคุณเท่านั้น</p>
       </div>
     </div>
 
-    <!-- Main App -->
+    <!-- Register Screen -->
+    <div id="register-screen" class="auth-screen hidden">
+      <div class="auth-card">
+        <div class="auth-logo">✨</div>
+        <h1>สมัครสมาชิก</h1>
+        <p>สร้างบัญชีและตั้งค่า Firebase ของคุณ</p>
+
+        <div class="form-group">
+          <label>Username *</label>
+          <input id="reg-username" type="text" placeholder="ตั้ง username (ห้ามซ้ำ)" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>Password *</label>
+          <div class="input-wrap">
+            <input id="reg-password" type="password" placeholder="ตั้ง password (อย่างน้อย 4 ตัว)" autocomplete="new-password">
+            <button class="eye-btn" type="button" onclick="togglePw('reg-password', this)">👁</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>PIN 4 หลัก (กันลืมรหัส) *</label>
+          <input id="reg-pin" type="number" placeholder="ตัวเลข 4 หลัก" maxlength="4" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)">
+        </div>
+
+        <div class="section-divider">
+          <span>Firebase Config</span>
+        </div>
+
+        <div class="form-group">
+          <label>API Key *</label>
+          <input id="reg-apiKey" type="text" placeholder="AIzaSy...">
+        </div>
+        <div class="form-group">
+          <label>Project ID *</label>
+          <input id="reg-projectId" type="text" placeholder="my-project-12345">
+        </div>
+        <div class="form-group">
+          <label>App ID *</label>
+          <input id="reg-appId" type="text" placeholder="1:123456:web:abc123">
+        </div>
+
+        <div id="reg-error" class="auth-error hidden"></div>
+        <button class="btn-primary" onclick="doRegister()">สมัครสมาชิก</button>
+        <div class="auth-switch">
+          มีบัญชีแล้ว? <a href="#" onclick="showScreen('login')">เข้าสู่ระบบ</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Forgot PIN Screen -->
+    <div id="pin-screen" class="auth-screen hidden">
+      <div class="auth-card">
+        <div class="auth-logo">🔑</div>
+        <h1>กู้รหัสผ่าน</h1>
+        <p>ใส่ PIN 4 หลักที่ตั้งไว้ตอนสมัคร</p>
+
+        <div class="form-group">
+          <label>Username</label>
+          <input id="pin-username" type="text" placeholder="กรอก username ของคุณ">
+        </div>
+        <div class="form-group">
+          <label>PIN 4 หลัก</label>
+          <input id="pin-code" type="number" placeholder="ตัวเลข 4 หลัก" maxlength="4" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)">
+        </div>
+        <div class="form-group hidden" id="new-pw-group">
+          <label>Password ใหม่</label>
+          <div class="input-wrap">
+            <input id="pin-new-pw" type="password" placeholder="ตั้ง password ใหม่">
+            <button class="eye-btn" type="button" onclick="togglePw('pin-new-pw', this)">👁</button>
+          </div>
+        </div>
+        <div id="pin-error" class="auth-error hidden"></div>
+        <button class="btn-primary" id="pin-btn" onclick="doVerifyPin()">ยืนยัน PIN</button>
+        <div class="auth-switch">
+          <a href="#" onclick="showScreen('login')">← กลับหน้า Login</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MAIN APP ══════════════════════════════════════════════════ -->
     <div id="main-app" class="hidden">
       <!-- Header -->
       <header class="app-header">
@@ -111,6 +195,7 @@
       <!-- Sync Status -->
       <div class="sync-bar" id="sync-bar">
         <span id="sync-text">🟢 เชื่อมต่อแล้ว</span>
+        <span class="sync-user" id="sync-user"></span>
       </div>
     </div>
 
@@ -139,27 +224,26 @@
         </div>
 
         <hr>
-        <h3>Firebase Config</h3>
-        <div class="form-group">
-          <label>API Key</label>
-          <input id="s-apiKey" type="text">
+        <h3>บัญชีที่ล็อกอินอยู่</h3>
+        <div class="user-info-box">
+          <div class="user-info-name" id="settings-username">—</div>
+          <button class="btn-outline danger" onclick="doLogout()" style="margin-top:8px">🚪 ออกจากระบบ</button>
         </div>
-        <div class="form-group">
-          <label>Project ID</label>
-          <input id="s-projectId" type="text">
+
+        <hr>
+        <h3>Firebase Config (อ่านอย่างเดียว)</h3>
+        <div class="cfg-readonly">
+          <div class="cfg-row"><span>API Key</span><code id="cfg-display-apiKey">—</code></div>
+          <div class="cfg-row"><span>Project ID</span><code id="cfg-display-projectId">—</code></div>
+          <div class="cfg-row"><span>App ID</span><code id="cfg-display-appId">—</code></div>
         </div>
-        <div class="form-group">
-          <label>App ID</label>
-          <input id="s-appId" type="text">
-        </div>
-        <button class="btn-primary" onclick="updateConfig()">บันทึก Config</button>
+        <p style="font-size:12px;color:var(--text-hint);margin-top:8px">แก้ไข config ได้ที่หน้าสมัคร/แก้ไขบัญชี</p>
 
         <hr>
         <h3>ข้อมูล</h3>
         <button class="btn-outline" onclick="exportExcel()">📊 Export Excel (เดือนนี้)</button>
         <button class="btn-outline" onclick="exportExcelYear()">📊 Export Excel (ทั้งปี)</button>
         <button class="btn-outline" onclick="exportData()">📥 Export JSON</button>
-        <button class="btn-outline danger" onclick="resetConfig()">🗑 รีเซ็ต Config</button>
       </div>
     </div>
     <div id="settings-overlay" class="overlay hidden" onclick="toggleSettings()"></div>
@@ -172,8 +256,6 @@
           <button onclick="closeModal()">✕</button>
         </div>
         <div class="modal-body">
-
-          <!-- Add Mode Radio (hidden when editing) -->
           <div id="add-mode-section" class="add-mode-group">
             <div class="add-mode-label">เพิ่มรายการสำหรับ</div>
             <div class="mode-options">
@@ -190,7 +272,6 @@
                 <span class="mode-icon">🗓️</span> กำหนดช่วงเอง
               </label>
             </div>
-            <!-- Range picker -->
             <div id="range-picker" class="range-row hidden">
               <label>จาก</label>
               <select id="r-from-month"></select>
@@ -222,7 +303,6 @@
               <input id="f-due" type="number" min="1" max="31" placeholder="1-31">
             </div>
           </div>
-          <!-- Single month fields (hidden in year/range mode) -->
           <div id="single-month-fields" class="form-row">
             <div class="form-group flex-1">
               <label>เดือน</label>
@@ -253,9 +333,7 @@
     <div id="toast" class="toast hidden"></div>
   </div>
 
-  <!-- SheetJS for Excel export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- Firebase SDK -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
