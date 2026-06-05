@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>รายจ่ายประจำเดือน</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -44,7 +44,7 @@
       <!-- Header -->
       <header class="app-header">
         <div class="header-left">
-          <span class="header-logo">💰</span>
+          <div class="header-logo">💰</div>
           <div>
             <div class="header-title">รายจ่ายประจำเดือน</div>
             <div class="header-sub" id="header-sub">กำลังโหลด...</div>
@@ -63,17 +63,17 @@
 
       <!-- Summary Cards -->
       <div class="summary-grid">
-        <div class="stat-card">
+        <div class="stat-card card-total">
           <div class="stat-label">รายจ่ายทั้งหมด</div>
           <div class="stat-value red" id="total-all">฿0</div>
           <div class="stat-count" id="count-all">0 รายการ</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card card-paid">
           <div class="stat-label">จ่ายแล้ว</div>
           <div class="stat-value green" id="total-paid">฿0</div>
           <div class="stat-count" id="count-paid">0 รายการ</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card card-unpaid">
           <div class="stat-label">ยังไม่ได้จ่าย</div>
           <div class="stat-value orange" id="total-unpaid">฿0</div>
           <div class="stat-count" id="count-unpaid">0 รายการ</div>
@@ -84,7 +84,7 @@
       <div class="progress-section">
         <div class="progress-label">
           <span>ความคืบหน้าการชำระ</span>
-          <span id="progress-pct">0%</span>
+          <span class="progress-pct-val" id="progress-pct">0%</span>
         </div>
         <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
       </div>
@@ -121,6 +121,24 @@
         <button onclick="toggleSettings()">✕</button>
       </div>
       <div class="settings-body">
+
+        <h3>ธีมสี</h3>
+        <div class="theme-switcher">
+          <button class="theme-btn" onclick="setTheme('warm')" id="theme-warm">
+            <span class="theme-dot" style="background:#c2702a"></span> Warm
+          </button>
+          <button class="theme-btn" onclick="setTheme('ocean')" id="theme-ocean">
+            <span class="theme-dot" style="background:#1a6ed4"></span> Ocean
+          </button>
+          <button class="theme-btn" onclick="setTheme('forest')" id="theme-forest">
+            <span class="theme-dot" style="background:#2e7d3a"></span> Forest
+          </button>
+          <button class="theme-btn" onclick="setTheme('midnight')" id="theme-midnight">
+            <span class="theme-dot" style="background:#8b5cf6"></span> Midnight
+          </button>
+        </div>
+
+        <hr>
         <h3>Firebase Config</h3>
         <div class="form-group">
           <label>API Key</label>
@@ -135,8 +153,11 @@
           <input id="s-appId" type="text">
         </div>
         <button class="btn-primary" onclick="updateConfig()">บันทึก Config</button>
+
         <hr>
         <h3>ข้อมูล</h3>
+        <button class="btn-outline" onclick="exportExcel()">📊 Export Excel (เดือนนี้)</button>
+        <button class="btn-outline" onclick="exportExcelYear()">📊 Export Excel (ทั้งปี)</button>
         <button class="btn-outline" onclick="exportData()">📥 Export JSON</button>
         <button class="btn-outline danger" onclick="resetConfig()">🗑 รีเซ็ต Config</button>
       </div>
@@ -151,6 +172,36 @@
           <button onclick="closeModal()">✕</button>
         </div>
         <div class="modal-body">
+
+          <!-- Add Mode Radio (hidden when editing) -->
+          <div id="add-mode-section" class="add-mode-group">
+            <div class="add-mode-label">เพิ่มรายการสำหรับ</div>
+            <div class="mode-options">
+              <label class="mode-option selected" id="mode-opt-single">
+                <input type="radio" name="add-mode" value="single" checked onchange="onModeChange()">
+                <span class="mode-icon">📅</span> เดือนนี้
+              </label>
+              <label class="mode-option" id="mode-opt-year">
+                <input type="radio" name="add-mode" value="year" onchange="onModeChange()">
+                <span class="mode-icon">📆</span> ทั้งปี (12 เดือน)
+              </label>
+              <label class="mode-option mode-option-full" id="mode-opt-range">
+                <input type="radio" name="add-mode" value="range" onchange="onModeChange()">
+                <span class="mode-icon">🗓️</span> กำหนดช่วงเอง
+              </label>
+            </div>
+            <!-- Range picker -->
+            <div id="range-picker" class="range-row hidden">
+              <label>จาก</label>
+              <select id="r-from-month"></select>
+              <select id="r-from-year"></select>
+              <span class="range-arrow">→</span>
+              <label>ถึง</label>
+              <select id="r-to-month"></select>
+              <select id="r-to-year"></select>
+            </div>
+          </div>
+
           <div class="form-row">
             <div class="form-group flex-2">
               <label>ชื่อรายการ *</label>
@@ -171,7 +222,8 @@
               <input id="f-due" type="number" min="1" max="31" placeholder="1-31">
             </div>
           </div>
-          <div class="form-row">
+          <!-- Single month fields (hidden in year/range mode) -->
+          <div id="single-month-fields" class="form-row">
             <div class="form-group flex-1">
               <label>เดือน</label>
               <select id="f-month"></select>
@@ -192,7 +244,7 @@
         </div>
         <div class="modal-footer">
           <button class="btn-outline" onclick="closeModal()">ยกเลิก</button>
-          <button class="btn-primary" onclick="saveItem()">บันทึก</button>
+          <button class="btn-primary" onclick="saveItem()" id="save-btn">บันทึก</button>
         </div>
       </div>
     </div>
@@ -201,6 +253,8 @@
     <div id="toast" class="toast hidden"></div>
   </div>
 
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <!-- Firebase SDK -->
   <script type="module" src="app.js"></script>
 </body>
