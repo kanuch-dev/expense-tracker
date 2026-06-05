@@ -561,9 +561,6 @@ function showToast(msg) {
   window._toastTimer = setTimeout(() => t.classList.add("hidden"), 2800);
 }
 
-function catInfo(name) {
-  return CATS.find(c => c.name === name) || CATS[CATS.length - 1];
-}
 
 // ── Boot ──────────────────────────────────────────────────────────────
 (function boot() {
