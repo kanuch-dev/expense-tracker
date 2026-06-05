@@ -1,305 +1,207 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Sarabun',sans-serif;background:#f8f7f4;color:#2c2c2a;min-height:100vh}
-:root{
-  --bg:#f8f7f4;--card:#fff;--border:#e8e6e1;--text:#2c2c2a;--muted:#888780;
-  --accent:#534AB7;--accent-light:#EEEDFE;--accent-mid:#AFA9EC;
-  --danger:#A32D2D;--danger-light:#FCEBEB;
-  --success:#0F6E56;--success-light:#E1F5EE;
-  --amber:#BA7517;--amber-light:#FAEEDA;
-  --radius:12px;--radius-sm:8px;
-}
-.app{max-width:720px;margin:0 auto;padding:1rem}
-header{padding:1.5rem 0 1rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem}
-h1{font-size:1.4rem;font-weight:600;color:var(--text);letter-spacing:-0.3px}
-h1 span{color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:1.1rem}
-.month-nav{display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem}
-.month-nav button{background:none;border:0.5px solid var(--border);border-radius:var(--radius-sm);width:32px;height:32px;cursor:pointer;color:var(--muted);font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
-.month-nav button:hover{border-color:var(--accent);color:var(--accent)}
-.month-label{font-size:0.95rem;font-weight:500;min-width:140px;text-align:center}
-.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem}
-.stat{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem}
-.stat-label{font-size:12px;color:var(--muted);margin-bottom:6px}
-.stat-value{font-size:1.3rem;font-weight:500;font-family:'IBM Plex Mono',monospace}
-.stat-value.total{color:var(--accent)}
-.stat-value.paid{color:var(--success)}
-.stat-value.unpaid{color:var(--amber)}
-.add-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:0.75rem;font-size:0.95rem;font-family:'Sarabun',sans-serif;font-weight:500;cursor:pointer;margin-bottom:1rem;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity 0.15s}
-.add-btn:hover{opacity:0.88}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:100;align-items:center;justify-content:center;padding:1rem}
-.modal-overlay.open{display:flex}
-.modal{background:var(--card);border-radius:var(--radius);padding:1.5rem;width:100%;max-width:400px;border:0.5px solid var(--border)}
-.modal h2{font-size:1rem;font-weight:600;margin-bottom:1.25rem;color:var(--text)}
-.field{margin-bottom:1rem}
-.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
-.field input,.field select,.field textarea{width:100%;border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.95rem;font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);outline:none;transition:border 0.15s}
-.field input:focus,.field select:focus{border-color:var(--accent)}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.modal-actions{display:flex;gap:8px;margin-top:1.25rem}
-.btn-save{flex:1;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:0.65rem;font-size:0.9rem;font-family:'Sarabun',sans-serif;font-weight:500;cursor:pointer}
-.btn-cancel{background:none;color:var(--muted);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:0.65rem 1rem;font-size:0.9rem;font-family:'Sarabun',sans-serif;cursor:pointer}
-.btn-cancel:hover{border-color:var(--text);color:var(--text)}
-.filter-bar{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
-.filter-chip{background:none;border:0.5px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:'Sarabun',sans-serif;color:var(--muted);transition:all 0.15s}
-.filter-chip.active{background:var(--accent-light);border-color:var(--accent-mid);color:var(--accent)}
-.expense-list{display:flex;flex-direction:column;gap:8px}
-.expense-item{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;display:flex;align-items:center;gap:12px;transition:border-color 0.15s}
-.expense-item:hover{border-color:var(--accent-mid)}
-.expense-item.paid-item{border-left:3px solid var(--success)}
-.expense-item.unpaid-item{border-left:3px solid var(--amber)}
-.cat-dot{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
-.expense-info{flex:1;min-width:0}
-.expense-name{font-weight:500;font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.expense-meta{font-size:12px;color:var(--muted);margin-top:2px}
-.expense-right{text-align:right;flex-shrink:0}
-.expense-amount{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:0.95rem}
-.expense-status{font-size:11px;margin-top:3px}
-.status-paid{color:var(--success);background:var(--success-light);padding:2px 8px;border-radius:10px}
-.status-unpaid{color:var(--amber);background:var(--amber-light);padding:2px 8px;border-radius:10px}
-.expense-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
-.icon-btn{background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;color:var(--muted);font-size:0.85rem;transition:all 0.15s;display:flex;align-items:center}
-.icon-btn:hover.edit{color:var(--accent);background:var(--accent-light)}
-.icon-btn:hover.del{color:var(--danger);background:var(--danger-light)}
-.icon-btn:hover.toggle{color:var(--success);background:var(--success-light)}
-.empty{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:0.9rem}
-.empty-icon{font-size:2.5rem;margin-bottom:0.75rem}
-.section-title{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:0.75rem}
-@media(max-width:480px){
-  .summary{grid-template-columns:1fr 1fr;}.summary .stat:last-child{display:none}
-  .field-row{grid-template-columns:1fr}
-  h1{font-size:1.2rem}
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายจ่ายประจำเดือน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app">
-  <header>
-    <h1>💰 รายจ่าย<span>ประจำเดือน</span></h1>
-    <div class="month-nav">
-      <button onclick="changeMonth(-1)">‹</button>
-      <span class="month-label" id="monthLabel"></span>
-      <button onclick="changeMonth(1)">›</button>
+  <div id="app">
+    <!-- Loading -->
+    <div id="loading-screen" class="loading-screen">
+      <div class="loading-logo">💰</div>
+      <div class="loading-text">กำลังโหลด...</div>
     </div>
-  </header>
 
-  <div class="summary">
-    <div class="stat"><div class="stat-label">รายจ่ายทั้งหมด</div><div class="stat-value total" id="sumTotal">฿0</div></div>
-    <div class="stat"><div class="stat-label">จ่ายแล้ว</div><div class="stat-value paid" id="sumPaid">฿0</div></div>
-    <div class="stat"><div class="stat-label">ยังไม่ได้จ่าย</div><div class="stat-value unpaid" id="sumUnpaid">฿0</div></div>
-  </div>
-
-  <button class="add-btn" onclick="openModal()">＋ เพิ่มรายจ่าย</button>
-
-  <div class="filter-bar">
-    <button class="filter-chip active" onclick="setFilter('all',this)">ทั้งหมด</button>
-    <button class="filter-chip" onclick="setFilter('unpaid',this)">ยังไม่จ่าย</button>
-    <button class="filter-chip" onclick="setFilter('paid',this)">จ่ายแล้ว</button>
-  </div>
-
-  <div class="section-title" id="listCount"></div>
-  <div class="expense-list" id="expenseList"></div>
-</div>
-
-<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
-  <div class="modal">
-    <h2 id="modalTitle">เพิ่มรายจ่าย</h2>
-    <div class="field">
-      <label>ชื่อรายจ่าย</label>
-      <input type="text" id="fName" placeholder="เช่น ค่าเช่า, Netflix, ไฟฟ้า">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>จำนวนเงิน (บาท)</label>
-        <input type="number" id="fAmount" placeholder="0" min="0">
-      </div>
-      <div class="field">
-        <label>วันที่ครบกำหนด</label>
-        <input type="number" id="fDueDay" placeholder="วันที่ 1-31" min="1" max="31">
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="setup-screen hidden">
+      <div class="setup-card">
+        <div class="setup-emoji">🔥</div>
+        <h1>ตั้งค่า Firebase</h1>
+        <p>กรอก Firebase Config เพื่อเชื่อมต่อฐานข้อมูล<br>ดูวิธีได้ใน <code>README.md</code></p>
+        <div class="form-group">
+          <label>API Key</label>
+          <input id="cfg-apiKey" type="text" placeholder="AIzaSy...">
+        </div>
+        <div class="form-group">
+          <label>Project ID</label>
+          <input id="cfg-projectId" type="text" placeholder="my-project-12345">
+        </div>
+        <div class="form-group">
+          <label>App ID</label>
+          <input id="cfg-appId" type="text" placeholder="1:123456:web:abc123">
+        </div>
+        <button class="btn-primary" onclick="saveConfig()">เชื่อมต่อ Firebase</button>
+        <p class="setup-hint">ข้อมูล config จะเก็บในเครื่องของคุณเท่านั้น</p>
       </div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>หมวดหมู่</label>
-        <select id="fCat">
-          <option value="🏠">🏠 ที่พัก</option>
-          <option value="💡">💡 สาธารณูปโภค</option>
-          <option value="🌐">🌐 อินเทอร์เน็ต</option>
-          <option value="📱">📱 โทรศัพท์</option>
-          <option value="🎬">🎬 บันเทิง</option>
-          <option value="🚗">🚗 ยานพาหนะ</option>
-          <option value="🍔">🍔 อาหาร</option>
-          <option value="🏥">🏥 สุขภาพ</option>
-          <option value="💳">💳 บัตรเครดิต</option>
-          <option value="📦">📦 อื่นๆ</option>
+
+    <!-- Main App -->
+    <div id="main-app" class="hidden">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-left">
+          <span class="header-logo">💰</span>
+          <div>
+            <div class="header-title">รายจ่ายประจำเดือน</div>
+            <div class="header-sub" id="header-sub">กำลังโหลด...</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="month-nav">
+            <button class="nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+            <span class="month-label" id="month-label"></span>
+            <button class="nav-btn" onclick="changeMonth(1)">&#8250;</button>
+          </div>
+          <button class="btn-add" onclick="openModal()">+ เพิ่ม</button>
+          <button class="btn-icon" onclick="toggleSettings()" title="ตั้งค่า">⚙️</button>
+        </div>
+      </header>
+
+      <!-- Summary Cards -->
+      <div class="summary-grid">
+        <div class="stat-card">
+          <div class="stat-label">รายจ่ายทั้งหมด</div>
+          <div class="stat-value red" id="total-all">฿0</div>
+          <div class="stat-count" id="count-all">0 รายการ</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">จ่ายแล้ว</div>
+          <div class="stat-value green" id="total-paid">฿0</div>
+          <div class="stat-count" id="count-paid">0 รายการ</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">ยังไม่ได้จ่าย</div>
+          <div class="stat-value orange" id="total-unpaid">฿0</div>
+          <div class="stat-count" id="count-unpaid">0 รายการ</div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-section">
+        <div class="progress-label">
+          <span>ความคืบหน้าการชำระ</span>
+          <span id="progress-pct">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input id="search-input" type="text" placeholder="ค้นหา..." oninput="renderList()">
+        </div>
+        <select id="filter-cat" onchange="renderList()">
+          <option value="">ทุกหมวด</option>
         </select>
-      </div>
-      <div class="field">
-        <label>สถานะ</label>
-        <select id="fStatus">
-          <option value="unpaid">ยังไม่ได้จ่าย</option>
+        <select id="filter-status" onchange="renderList()">
+          <option value="">ทุกสถานะ</option>
+          <option value="unpaid">ค้างจ่าย</option>
           <option value="paid">จ่ายแล้ว</option>
         </select>
       </div>
-    </div>
-    <div class="field">
-      <label>หมายเหตุ (ไม่บังคับ)</label>
-      <input type="text" id="fNote" placeholder="บันทึกเพิ่มเติม">
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
-      <button class="btn-save" onclick="saveExpense()">บันทึก</button>
-    </div>
-  </div>
-</div>
 
-<script>
-const MONTHS_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-let now = new Date();
-let curYear = now.getFullYear();
-let curMonth = now.getMonth();
-let editId = null;
-let filter = 'all';
+      <!-- List -->
+      <div id="list-container" class="list-container"></div>
 
-function storageKey(y,m){return `expenses_${y}_${m}`}
-function loadData(){
-  try{const d=localStorage.getItem(storageKey(curYear,curMonth));return d?JSON.parse(d):[]}catch(e){return[]}
-}
-function saveData(arr){localStorage.setItem(storageKey(curYear,curMonth),JSON.stringify(arr))}
-function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
-
-function fmt(n){return '฿'+Number(n).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:0})}
-
-function changeMonth(d){
-  curMonth+=d;
-  if(curMonth>11){curMonth=0;curYear++}
-  if(curMonth<0){curMonth=11;curYear--}
-  render();
-}
-
-function setFilter(f,el){
-  filter=f;
-  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  render();
-}
-
-function render(){
-  document.getElementById('monthLabel').textContent=`${MONTHS_TH[curMonth]} ${curYear+543}`;
-  const all=loadData();
-  const total=all.reduce((s,e)=>s+Number(e.amount),0);
-  const paid=all.filter(e=>e.status==='paid').reduce((s,e)=>s+Number(e.amount),0);
-  document.getElementById('sumTotal').textContent=fmt(total);
-  document.getElementById('sumPaid').textContent=fmt(paid);
-  document.getElementById('sumUnpaid').textContent=fmt(total-paid);
-
-  const filtered=filter==='all'?all:all.filter(e=>e.status===filter);
-  const sorted=[...filtered].sort((a,b)=>(a.dueDay||99)-(b.dueDay||99));
-  document.getElementById('listCount').textContent=`รายการ ${sorted.length} รายการ`;
-
-  const list=document.getElementById('expenseList');
-  if(sorted.length===0){
-    list.innerHTML=`<div class="empty"><div class="empty-icon">📋</div>ยังไม่มีรายจ่ายสำหรับเดือนนี้<br><small>กด "+ เพิ่มรายจ่าย" เพื่อเริ่มต้น</small></div>`;
-    return;
-  }
-  list.innerHTML=sorted.map(e=>`
-    <div class="expense-item ${e.status==='paid'?'paid-item':'unpaid-item'}">
-      <div class="cat-dot" style="background:${e.status==='paid'?'#E1F5EE':'#FAEEDA'}">${e.category}</div>
-      <div class="expense-info">
-        <div class="expense-name">${e.name}</div>
-        <div class="expense-meta">${e.dueDay?`ครบ วันที่ ${e.dueDay}`:''}${e.note?' · '+e.note:''}</div>
+      <!-- Sync Status -->
+      <div class="sync-bar" id="sync-bar">
+        <span id="sync-text">🟢 เชื่อมต่อแล้ว</span>
       </div>
-      <div class="expense-right">
-        <div class="expense-amount">${fmt(e.amount)}</div>
-        <div class="expense-status">
-          <span class="${e.status==='paid'?'status-paid':'status-unpaid'}">${e.status==='paid'?'✓ จ่ายแล้ว':'⏳ ค้างจ่าย'}</span>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="settings-panel hidden">
+      <div class="settings-header">
+        <h2>ตั้งค่า</h2>
+        <button onclick="toggleSettings()">✕</button>
+      </div>
+      <div class="settings-body">
+        <h3>Firebase Config</h3>
+        <div class="form-group">
+          <label>API Key</label>
+          <input id="s-apiKey" type="text">
+        </div>
+        <div class="form-group">
+          <label>Project ID</label>
+          <input id="s-projectId" type="text">
+        </div>
+        <div class="form-group">
+          <label>App ID</label>
+          <input id="s-appId" type="text">
+        </div>
+        <button class="btn-primary" onclick="updateConfig()">บันทึก Config</button>
+        <hr>
+        <h3>ข้อมูล</h3>
+        <button class="btn-outline" onclick="exportData()">📥 Export JSON</button>
+        <button class="btn-outline danger" onclick="resetConfig()">🗑 รีเซ็ต Config</button>
+      </div>
+    </div>
+    <div id="settings-overlay" class="overlay hidden" onclick="toggleSettings()"></div>
+
+    <!-- Modal -->
+    <div id="modal-overlay" class="overlay hidden" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 id="modal-title">เพิ่มรายการ</h2>
+          <button onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>ชื่อรายการ *</label>
+              <input id="f-name" type="text" placeholder="เช่น ค่าเช่า, Netflix">
+            </div>
+            <div class="form-group flex-1">
+              <label>จำนวนเงิน (฿) *</label>
+              <input id="f-amount" type="number" placeholder="0" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>หมวดหมู่</label>
+              <select id="f-cat"></select>
+            </div>
+            <div class="form-group flex-1">
+              <label>ครบกำหนดวันที่</label>
+              <input id="f-due" type="number" min="1" max="31" placeholder="1-31">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>เดือน</label>
+              <select id="f-month"></select>
+            </div>
+            <div class="form-group flex-1">
+              <label>ปี (พ.ศ.)</label>
+              <input id="f-year" type="number" placeholder="2568">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>หมายเหตุ</label>
+            <input id="f-note" type="text" placeholder="">
+          </div>
+          <div class="form-check">
+            <input id="f-paid" type="checkbox">
+            <label for="f-paid">จ่ายแล้ว</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-outline" onclick="closeModal()">ยกเลิก</button>
+          <button class="btn-primary" onclick="saveItem()">บันทึก</button>
         </div>
       </div>
-      <div class="expense-actions">
-        <button class="icon-btn toggle" onclick="toggleStatus('${e.id}')" title="${e.status==='paid'?'ทำเครื่องหมายว่ายังไม่จ่าย':'ทำเครื่องหมายว่าจ่ายแล้ว'}">
-          ${e.status==='paid'?'↩':'✓'}
-        </button>
-        <button class="icon-btn edit" onclick="openEdit('${e.id}')" title="แก้ไข">✎</button>
-        <button class="icon-btn del" onclick="deleteExpense('${e.id}')" title="ลบ">✕</button>
-      </div>
     </div>
-  `).join('');
-}
 
-function openModal(id){
-  editId=id||null;
-  const all=loadData();
-  document.getElementById('modalTitle').textContent=id?'แก้ไขรายจ่าย':'เพิ่มรายจ่าย';
-  if(id){
-    const e=all.find(x=>x.id===id);
-    document.getElementById('fName').value=e.name;
-    document.getElementById('fAmount').value=e.amount;
-    document.getElementById('fDueDay').value=e.dueDay||'';
-    document.getElementById('fCat').value=e.category;
-    document.getElementById('fStatus').value=e.status;
-    document.getElementById('fNote').value=e.note||'';
-  }else{
-    document.getElementById('fName').value='';
-    document.getElementById('fAmount').value='';
-    document.getElementById('fDueDay').value='';
-    document.getElementById('fCat').value='🏠';
-    document.getElementById('fStatus').value='unpaid';
-    document.getElementById('fNote').value='';
-  }
-  document.getElementById('modalOverlay').classList.add('open');
-  setTimeout(()=>document.getElementById('fName').focus(),100);
-}
+    <!-- Toast -->
+    <div id="toast" class="toast hidden"></div>
+  </div>
 
-function openEdit(id){openModal(id)}
-
-function closeModal(){
-  document.getElementById('modalOverlay').classList.remove('open');
-  editId=null;
-}
-
-function closeModalOutside(e){if(e.target.id==='modalOverlay')closeModal()}
-
-function saveExpense(){
-  const name=document.getElementById('fName').value.trim();
-  const amount=parseFloat(document.getElementById('fAmount').value);
-  const dueDay=parseInt(document.getElementById('fDueDay').value)||null;
-  const category=document.getElementById('fCat').value;
-  const status=document.getElementById('fStatus').value;
-  const note=document.getElementById('fNote').value.trim();
-  if(!name||isNaN(amount)||amount<0){alert('กรุณากรอกชื่อและจำนวนเงิน');return}
-  const all=loadData();
-  if(editId){
-    const idx=all.findIndex(x=>x.id===editId);
-    if(idx>-1)all[idx]={...all[idx],name,amount,dueDay,category,status,note};
-  }else{
-    all.push({id:genId(),name,amount,dueDay,category,status,note,createdAt:Date.now()});
-  }
-  saveData(all);closeModal();render();
-}
-
-function deleteExpense(id){
-  if(!confirm('ต้องการลบรายจ่ายนี้?'))return;
-  const all=loadData().filter(e=>e.id!==id);
-  saveData(all);render();
-}
-
-function toggleStatus(id){
-  const all=loadData();
-  const idx=all.findIndex(e=>e.id===id);
-  if(idx>-1)all[idx].status=all[idx].status==='paid'?'unpaid':'paid';
-  saveData(all);render();
-}
-
-// keyboard
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
-
-render();
-</script>
+  <!-- Firebase SDK -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
