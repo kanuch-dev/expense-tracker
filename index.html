@@ -9,39 +9,41 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <!-- Loading -->
-    <div id="loading-screen" class="loading-screen">
-      <div class="loading-logo">💰</div>
-      <div class="loading-text">กำลังโหลด...</div>
-    </div>
+<div id="app">
 
-    <!-- Setup Screen -->
-    <div id="setup-screen" class="setup-screen hidden">
-      <div class="setup-card">
-        <div class="setup-emoji">🔥</div>
-        <h1>ตั้งค่า Firebase</h1>
-        <p>กรอก Firebase Config เพื่อเชื่อมต่อฐานข้อมูล<br>ดูวิธีได้ใน <code>README.md</code></p>
-        <div class="form-group">
-          <label>API Key</label>
-          <input id="cfg-apiKey" type="text" placeholder="AIzaSy...">
-        </div>
-        <div class="form-group">
-          <label>Project ID</label>
-          <input id="cfg-projectId" type="text" placeholder="my-project-12345">
-        </div>
-        <div class="form-group">
-          <label>App ID</label>
-          <input id="cfg-appId" type="text" placeholder="1:123456:web:abc123">
-        </div>
-        <button class="btn-primary" onclick="saveConfig()">เชื่อมต่อ Firebase</button>
-        <p class="setup-hint">ข้อมูล config จะเก็บในเครื่องของคุณเท่านั้น</p>
-      </div>
-    </div>
+  <!-- Loading -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-logo">💰</div>
+    <div class="loading-text">กำลังโหลด...</div>
+  </div>
 
-    <!-- Main App -->
-    <div id="main-app" class="hidden">
-      <!-- Header -->
+  <!-- Setup Screen -->
+  <div id="setup-screen" class="setup-screen hidden">
+    <div class="setup-card">
+      <div class="setup-emoji">🔥</div>
+      <h1>ตั้งค่า Firebase</h1>
+      <p>กรอก Firebase Config เพื่อเชื่อมต่อฐานข้อมูล</p>
+      <div class="form-group"><label>API Key</label><input id="cfg-apiKey" type="text" placeholder="AIzaSy..."></div>
+      <div class="form-group"><label>Project ID</label><input id="cfg-projectId" type="text" placeholder="my-project-12345"></div>
+      <div class="form-group"><label>App ID</label><input id="cfg-appId" type="text" placeholder="1:123456:web:abc123"></div>
+      <button class="btn-primary" onclick="saveConfig()">เชื่อมต่อ Firebase</button>
+      <p class="setup-hint">ข้อมูล config จะเก็บในเครื่องของคุณเท่านั้น</p>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="main-app" class="hidden">
+
+    <!-- Nav Tabs -->
+    <nav class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('dashboard')" id="tab-dashboard">📊 รายจ่าย</button>
+      <button class="tab-btn" onclick="switchTab('recurring')" id="tab-recurring">🔁 ประจำ</button>
+      <button class="tab-btn" onclick="switchTab('bulk')" id="tab-bulk">📅 ช่วงเวลา</button>
+      <button class="tab-btn" onclick="switchTab('report')" id="tab-report">📈 รายงาน</button>
+    </nav>
+
+    <!-- ══════════════ TAB: DASHBOARD ══════════════ -->
+    <div id="page-dashboard" class="tab-page">
       <header class="app-header">
         <div class="header-left">
           <span class="header-logo">💰</span>
@@ -61,7 +63,6 @@
         </div>
       </header>
 
-      <!-- Summary Cards -->
       <div class="summary-grid">
         <div class="stat-card">
           <div class="stat-label">รายจ่ายทั้งหมด</div>
@@ -80,7 +81,6 @@
         </div>
       </div>
 
-      <!-- Progress Bar -->
       <div class="progress-section">
         <div class="progress-label">
           <span>ความคืบหน้าการชำระ</span>
@@ -89,15 +89,12 @@
         <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
       </div>
 
-      <!-- Filters -->
       <div class="filter-bar">
         <div class="search-wrap">
           <span class="search-icon">🔍</span>
           <input id="search-input" type="text" placeholder="ค้นหา..." oninput="renderList()">
         </div>
-        <select id="filter-cat" onchange="renderList()">
-          <option value="">ทุกหมวด</option>
-        </select>
+        <select id="filter-cat" onchange="renderList()"><option value="">ทุกหมวด</option></select>
         <select id="filter-status" onchange="renderList()">
           <option value="">ทุกสถานะ</option>
           <option value="unpaid">ค้างจ่าย</option>
@@ -105,103 +102,201 @@
         </select>
       </div>
 
-      <!-- List -->
       <div id="list-container" class="list-container"></div>
+      <div class="sync-bar"><span id="sync-text">🟢 เชื่อมต่อแล้ว</span></div>
+    </div>
 
-      <!-- Sync Status -->
-      <div class="sync-bar" id="sync-bar">
-        <span id="sync-text">🟢 เชื่อมต่อแล้ว</span>
+    <!-- ══════════════ TAB: RECURRING ══════════════ -->
+    <div id="page-recurring" class="tab-page hidden">
+      <div class="page-header">
+        <div>
+          <h2>🔁 รายจ่ายประจำ</h2>
+          <p class="page-desc">เพิ่มครั้งเดียว ใช้สำหรับสร้างรายการทุกเดือนอัตโนมัติ</p>
+        </div>
+        <button class="btn-add" onclick="openRecurringModal()">+ เพิ่ม</button>
+      </div>
+
+      <div class="recurring-actions">
+        <div class="form-row" style="align-items:flex-end;gap:10px">
+          <div class="form-group" style="flex:1">
+            <label>เลือกเดือนที่จะสร้าง</label>
+            <select id="apply-month"></select>
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>ปี (พ.ศ.)</label>
+            <input id="apply-year" type="number" placeholder="2568">
+          </div>
+          <button class="btn-primary" style="flex:1;margin-top:0" onclick="applyRecurring()">✅ สร้างรายการเดือนนี้</button>
+        </div>
+      </div>
+
+      <div id="recurring-list" class="list-container"></div>
+    </div>
+
+    <!-- ══════════════ TAB: BULK ADD ══════════════ -->
+    <div id="page-bulk" class="tab-page hidden">
+      <div class="page-header">
+        <div>
+          <h2>📅 เพิ่มรายจ่ายช่วงเวลา</h2>
+          <p class="page-desc">เพิ่มรายการเดียวกันหลายเดือนพร้อมกัน</p>
+        </div>
+      </div>
+
+      <div class="bulk-form card">
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label>ชื่อรายการ *</label>
+            <input id="b-name" type="text" placeholder="เช่น ค่าผ่อนรถ">
+          </div>
+          <div class="form-group flex-1">
+            <label>จำนวนเงิน (฿) *</label>
+            <input id="b-amount" type="number" placeholder="0" min="0">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>หมวดหมู่</label>
+            <select id="b-cat"></select>
+          </div>
+          <div class="form-group flex-1">
+            <label>ครบกำหนดวันที่</label>
+            <input id="b-due" type="number" min="1" max="31" placeholder="1-31">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>หมายเหตุ</label>
+          <input id="b-note" type="text" placeholder="">
+        </div>
+        <hr style="margin:1rem 0;border-color:var(--border)">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>ตั้งแต่เดือน (ปี-เดือน)</label>
+            <input id="b-from" type="month" placeholder="2026-05">
+          </div>
+          <div class="form-group flex-1">
+            <label>ถึงเดือน (ปี-เดือน)</label>
+            <input id="b-to" type="month" placeholder="2027-04">
+          </div>
+        </div>
+        <div id="bulk-preview" class="bulk-preview"></div>
+        <button class="btn-primary" onclick="bulkAdd()">➕ เพิ่มทุกเดือนในช่วงนี้</button>
       </div>
     </div>
 
-    <!-- Settings Panel -->
-    <div id="settings-panel" class="settings-panel hidden">
-      <div class="settings-header">
-        <h2>ตั้งค่า</h2>
-        <button onclick="toggleSettings()">✕</button>
+    <!-- ══════════════ TAB: REPORT ══════════════ -->
+    <div id="page-report" class="tab-page hidden">
+      <div class="page-header">
+        <div>
+          <h2>📈 รายงาน</h2>
+          <p class="page-desc">สรุปรายจ่ายและ Export Excel</p>
+        </div>
       </div>
-      <div class="settings-body">
-        <h3>Firebase Config</h3>
-        <div class="form-group">
-          <label>API Key</label>
-          <input id="s-apiKey" type="text">
-        </div>
-        <div class="form-group">
-          <label>Project ID</label>
-          <input id="s-projectId" type="text">
-        </div>
-        <div class="form-group">
-          <label>App ID</label>
-          <input id="s-appId" type="text">
-        </div>
-        <button class="btn-primary" onclick="updateConfig()">บันทึก Config</button>
-        <hr>
-        <h3>ข้อมูล</h3>
-        <button class="btn-outline" onclick="exportData()">📥 Export JSON</button>
-        <button class="btn-outline danger" onclick="resetConfig()">🗑 รีเซ็ต Config</button>
-      </div>
-    </div>
-    <div id="settings-overlay" class="overlay hidden" onclick="toggleSettings()"></div>
 
-    <!-- Modal -->
-    <div id="modal-overlay" class="overlay hidden" onclick="if(event.target===this)closeModal()">
-      <div class="modal">
-        <div class="modal-header">
-          <h2 id="modal-title">เพิ่มรายการ</h2>
-          <button onclick="closeModal()">✕</button>
+      <div class="card" style="margin:0 1rem 1rem">
+        <div class="form-row" style="align-items:flex-end;gap:10px">
+          <div class="form-group" style="flex:1">
+            <label>เดือน</label>
+            <select id="r-month"></select>
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>ปี (พ.ศ.)</label>
+            <input id="r-year" type="number" value="">
+          </div>
+          <button class="btn-primary" style="flex:1;margin-top:0" onclick="generateReport()">🔍 ดูรายงาน</button>
         </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group flex-2">
-              <label>ชื่อรายการ *</label>
-              <input id="f-name" type="text" placeholder="เช่น ค่าเช่า, Netflix">
-            </div>
-            <div class="form-group flex-1">
-              <label>จำนวนเงิน (฿) *</label>
-              <input id="f-amount" type="number" placeholder="0" min="0">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group flex-1">
-              <label>หมวดหมู่</label>
-              <select id="f-cat"></select>
-            </div>
-            <div class="form-group flex-1">
-              <label>ครบกำหนดวันที่</label>
-              <input id="f-due" type="number" min="1" max="31" placeholder="1-31">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group flex-1">
-              <label>เดือน</label>
-              <select id="f-month"></select>
-            </div>
-            <div class="form-group flex-1">
-              <label>ปี (พ.ศ.)</label>
-              <input id="f-year" type="number" placeholder="2568">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>หมายเหตุ</label>
-            <input id="f-note" type="text" placeholder="">
-          </div>
-          <div class="form-check">
-            <input id="f-paid" type="checkbox">
-            <label for="f-paid">จ่ายแล้ว</label>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-outline" onclick="closeModal()">ยกเลิก</button>
-          <button class="btn-primary" onclick="saveItem()">บันทึก</button>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn-outline" style="margin-top:0" onclick="exportExcel()">📊 Export Excel เดือนนี้</button>
+          <button class="btn-outline" style="margin-top:0" onclick="exportExcelYear()">📁 Export Excel ทั้งปี</button>
         </div>
       </div>
+
+      <div id="report-content" class="report-content"></div>
     </div>
 
-    <!-- Toast -->
-    <div id="toast" class="toast hidden"></div>
+  </div><!-- /main-app -->
+
+  <!-- Settings Panel -->
+  <div id="settings-panel" class="settings-panel hidden">
+    <div class="settings-header">
+      <h2>ตั้งค่า</h2>
+      <button onclick="toggleSettings()">✕</button>
+    </div>
+    <div class="settings-body">
+      <h3>Firebase Config</h3>
+      <div class="form-group"><label>API Key</label><input id="s-apiKey" type="text"></div>
+      <div class="form-group"><label>Project ID</label><input id="s-projectId" type="text"></div>
+      <div class="form-group"><label>App ID</label><input id="s-appId" type="text"></div>
+      <button class="btn-primary" onclick="updateConfig()">บันทึก Config</button>
+      <hr>
+      <h3>ข้อมูล</h3>
+      <button class="btn-outline" onclick="exportData()">📥 Export JSON</button>
+      <button class="btn-outline danger" onclick="resetConfig()">🗑 รีเซ็ต Config</button>
+    </div>
+  </div>
+  <div id="settings-overlay" class="overlay hidden" onclick="toggleSettings()"></div>
+
+  <!-- Modal: Add/Edit Expense -->
+  <div id="modal-overlay" class="overlay hidden" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title">เพิ่มรายการ</h2>
+        <button onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group flex-2"><label>ชื่อรายการ *</label><input id="f-name" type="text" placeholder="เช่น ค่าเช่า, Netflix"></div>
+          <div class="form-group flex-1"><label>จำนวนเงิน (฿) *</label><input id="f-amount" type="number" placeholder="0" min="0"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1"><label>หมวดหมู่</label><select id="f-cat"></select></div>
+          <div class="form-group flex-1"><label>ครบกำหนดวันที่</label><input id="f-due" type="number" min="1" max="31" placeholder="1-31"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1"><label>เดือน</label><select id="f-month"></select></div>
+          <div class="form-group flex-1"><label>ปี (พ.ศ.)</label><input id="f-year" type="number" placeholder="2568"></div>
+        </div>
+        <div class="form-group"><label>หมายเหตุ</label><input id="f-note" type="text"></div>
+        <div class="form-check">
+          <input id="f-paid" type="checkbox">
+          <label for="f-paid">จ่ายแล้ว</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn-primary" onclick="saveItem()">บันทึก</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Firebase SDK -->
-  <script type="module" src="app.js"></script>
+  <!-- Modal: Recurring -->
+  <div id="rec-modal-overlay" class="overlay hidden" onclick="if(event.target===this)closeRecurringModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="rec-modal-title">เพิ่มรายจ่ายประจำ</h2>
+        <button onclick="closeRecurringModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group flex-2"><label>ชื่อรายการ *</label><input id="r-name" type="text" placeholder="เช่น Netflix, ค่าเช่า"></div>
+          <div class="form-group flex-1"><label>จำนวนเงิน (฿) *</label><input id="r-amount" type="number" placeholder="0" min="0"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1"><label>หมวดหมู่</label><select id="r-cat"></select></div>
+          <div class="form-group flex-1"><label>ครบกำหนดวันที่</label><input id="r-due" type="number" min="1" max="31" placeholder="1-31"></div>
+        </div>
+        <div class="form-group"><label>หมายเหตุ</label><input id="r-note" type="text"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" onclick="closeRecurringModal()">ยกเลิก</button>
+        <button class="btn-primary" onclick="saveRecurring()">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
