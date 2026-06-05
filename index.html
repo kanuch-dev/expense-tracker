@@ -39,8 +39,12 @@
         </div>
         <div id="login-error" class="auth-error hidden"></div>
         <button class="btn-primary" onclick="doLogin()">เข้าสู่ระบบ</button>
+        <div class="auth-switch" style="margin-top:10px">
+          <a href="#" onclick="showScreen('pin')" style="color:var(--text-muted);font-size:12px">🔑 ลืมรหัสผ่าน?</a>
+        </div>
         <div class="auth-switch">
           ยังไม่มีบัญชี? <a href="#" onclick="showScreen('register')">สมัครสมาชิก</a>
+          &nbsp;·&nbsp; <a href="#" onclick="openImportModal()">📲 นำเข้าจากเครื่องอื่น</a>
         </div>
       </div>
     </div>
@@ -70,6 +74,7 @@
 
         <div class="section-divider">
           <span>Firebase Config</span>
+          <button type="button" class="fbhelp-btn" onclick="openFbHelp()">❓ คืออะไร?</button>
         </div>
 
         <div class="form-group">
@@ -231,6 +236,11 @@
         </div>
 
         <hr>
+        <h3>ย้ายบัญชีไปเครื่องอื่น</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Copy โค้ดบัญชีไปกรอกที่เครื่องใหม่ — ข้อมูลรายจ่ายอยู่ใน Firebase แล้ว ไม่หาย</p>
+        <button class="btn-outline" onclick="doExportAccount()">📤 Export โค้ดบัญชี (ย้ายเครื่อง)</button>
+
+        <hr>
         <h3>Firebase Config (อ่านอย่างเดียว)</h3>
         <div class="cfg-readonly">
           <div class="cfg-row"><span>API Key</span><code id="cfg-display-apiKey">—</code></div>
@@ -331,6 +341,110 @@
 
     <!-- Toast -->
     <div id="toast" class="toast hidden"></div>
+
+    <!-- ── Confirm Modal ─────────────────────────────────────────── -->
+    <div id="confirm-overlay" class="overlay hidden" onclick="if(event.target===this)closeConfirm(false)">
+      <div class="modal confirm-modal">
+        <div class="confirm-icon" id="confirm-icon">⚠️</div>
+        <div class="confirm-title" id="confirm-title">ยืนยันการดำเนินการ</div>
+        <div class="confirm-msg" id="confirm-msg"></div>
+        <div class="confirm-actions">
+          <button class="btn-outline" id="confirm-cancel-btn" onclick="closeConfirm(false)">ยกเลิก</button>
+          <button class="btn-primary" id="confirm-ok-btn" onclick="closeConfirm(true)">ยืนยัน</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Firebase Help Modal ───────────────────────────────────── -->
+    <div id="fbhelp-overlay" class="overlay hidden" onclick="if(event.target===this)closeFbHelp()">
+      <div class="modal fbhelp-modal">
+        <div class="modal-header">
+          <h2>🔥 Firebase Config คืออะไร?</h2>
+          <button onclick="closeFbHelp()">✕</button>
+        </div>
+        <div class="modal-body fbhelp-body">
+          <p class="fbhelp-intro">Firebase คือบริการฐานข้อมูลของ Google ใช้เก็บข้อมูลรายจ่ายของคุณบน cloud ซิงค์ข้ามอุปกรณ์ได้ทันที และ<strong>ฟรี</strong>สำหรับการใช้งานส่วนตัว</p>
+
+          <div class="fbhelp-step">
+            <div class="fbhelp-num">1</div>
+            <div>
+              <div class="fbhelp-step-title">สร้าง Firebase Project</div>
+              <div class="fbhelp-step-desc">ไปที่ <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → คลิก <strong>"Add project"</strong> → ตั้งชื่อ → สร้าง</div>
+            </div>
+          </div>
+
+          <div class="fbhelp-step">
+            <div class="fbhelp-num">2</div>
+            <div>
+              <div class="fbhelp-step-title">เปิด Firestore Database</div>
+              <div class="fbhelp-step-desc">เมนูซ้าย → <strong>Build → Firestore Database</strong> → Create database → เลือก Production mode → region: <code>asia-southeast1</code></div>
+            </div>
+          </div>
+
+          <div class="fbhelp-step">
+            <div class="fbhelp-num">3</div>
+            <div>
+              <div class="fbhelp-step-title">ตั้ง Rules (เปิดให้อ่านเขียนได้)</div>
+              <div class="fbhelp-step-desc">Firestore → แท็บ <strong>Rules</strong> → วางโค้ดนี้แล้วกด Publish:</div>
+              <div class="fbhelp-code">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</div>
+            </div>
+          </div>
+
+          <div class="fbhelp-step">
+            <div class="fbhelp-num">4</div>
+            <div>
+              <div class="fbhelp-step-title">หา Config ที่ไหน?</div>
+              <div class="fbhelp-step-desc">
+                ⚙️ Project Settings (ซ้ายบน) → เลื่อนลงหา <strong>"Your apps"</strong> → คลิก <strong>&lt;/&gt; Web</strong> → ตั้งชื่อ App → Register<br><br>
+                จะได้ค่า 3 ตัวนี้:
+              </div>
+              <div class="fbhelp-config-box">
+                <div class="fbhelp-cfg-row"><span class="fbhelp-cfg-key">apiKey</span><span class="fbhelp-cfg-val">"AIzaSy..."</span></div>
+                <div class="fbhelp-cfg-row"><span class="fbhelp-cfg-key">projectId</span><span class="fbhelp-cfg-val">"my-project-12345"</span></div>
+                <div class="fbhelp-cfg-row"><span class="fbhelp-cfg-key">appId</span><span class="fbhelp-cfg-val">"1:123456:web:abc..."</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fbhelp-note">
+            💡 <strong>ใช้ฟรีตลอด?</strong> ใช่ — Firestore มี free tier 1 GB storage + 50,000 reads/วัน เกินพอสำหรับใช้ส่วนตัว
+          </div>
+        </div>
+        <div class="modal-footer">
+          <a href="https://console.firebase.google.com" target="_blank" class="btn-primary" style="display:block;text-align:center;text-decoration:none">เปิด Firebase Console →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Import Account Modal ──────────────────────────────────── -->
+    <div id="import-overlay" class="overlay hidden" onclick="if(event.target===this)closeImportModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>📲 นำเข้าบัญชีจากเครื่องอื่น</h2>
+          <button onclick="closeImportModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">วางโค้ดบัญชีที่ copy มาจากเครื่องเก่า (ได้จากปุ่ม "Export บัญชี" ในตั้งค่า)</p>
+          <div class="form-group">
+            <label>โค้ดบัญชี</label>
+            <textarea id="import-code" rows="5" style="width:100%;font-family:monospace;font-size:12px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text);resize:vertical" placeholder="วางโค้ดที่นี่..."></textarea>
+          </div>
+          <div id="import-error" class="auth-error hidden"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-outline" onclick="closeImportModal()">ยกเลิก</button>
+          <button class="btn-primary" onclick="doImportAccount()">นำเข้าบัญชี</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>

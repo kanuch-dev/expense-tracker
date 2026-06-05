@@ -53,7 +53,39 @@ function applyTheme(theme) {
 }
 window.setTheme = (theme) => applyTheme(theme);
 
-// ── Password visibility toggle ───────────────────────────────────────
+// ── Confirm Modal ────────────────────────────────────────────────────
+let _confirmResolve = null;
+
+function showConfirm({ icon = "⚠️", title, msg, okText = "ยืนยัน", okDanger = false }) {
+  return new Promise(resolve => {
+    _confirmResolve = resolve;
+    document.getElementById("confirm-icon").textContent = icon;
+    document.getElementById("confirm-title").textContent = title;
+    document.getElementById("confirm-msg").textContent = msg;
+    const okBtn = document.getElementById("confirm-ok-btn");
+    okBtn.textContent = okText;
+    okBtn.className = okDanger ? "btn-primary btn-danger-primary" : "btn-primary";
+    document.getElementById("confirm-overlay").classList.remove("hidden");
+  });
+}
+window.closeConfirm = (result) => {
+  document.getElementById("confirm-overlay").classList.add("hidden");
+  if (_confirmResolve) { _confirmResolve(result); _confirmResolve = null; }
+};
+
+// ── Firebase Help Modal ───────────────────────────────────────────────
+window.openFbHelp  = () => document.getElementById("fbhelp-overlay").classList.remove("hidden");
+window.closeFbHelp = () => document.getElementById("fbhelp-overlay").classList.add("hidden");
+
+// ── Import Account Modal ──────────────────────────────────────────────
+window.openImportModal  = () => {
+  document.getElementById("import-code").value = "";
+  document.getElementById("import-error").classList.add("hidden");
+  document.getElementById("import-overlay").classList.remove("hidden");
+};
+window.closeImportModal = () => document.getElementById("import-overlay").classList.add("hidden");
+
+
 window.togglePw = (inputId, btn) => {
   const input = document.getElementById(inputId);
   if (input.type === "password") {
@@ -203,8 +235,9 @@ window.doVerifyPin = () => {
 };
 
 // ── Auth: Logout ─────────────────────────────────────────────────────
-window.doLogout = () => {
-  if (!confirm("ออกจากระบบ?")) return;
+window.doLogout = async () => {
+  const ok = await showConfirm({ icon: "🚪", title: "ออกจากระบบ?", msg: "Session จะถูกล้าง ต้องล็อกอินใหม่ครั้งหน้า", okText: "ออกจากระบบ", okDanger: true });
+  if (!ok) return;
   clearSession();
   if (unsubscribe) unsubscribe();
   // Clean up firebase apps
@@ -298,7 +331,10 @@ async function updateItem(id, data) {
 }
 
 window.deleteItem = async (id) => {
-  if (!confirm("ลบรายการนี้?")) return;
+  const item = allItems.find(x => x.id === id);
+  const name = item ? item.name : "รายการนี้";
+  const ok = await showConfirm({ icon: "🗑️", title: "ลบรายการ?", msg: `"${name}" จะถูกลบถาวรจาก Firebase`, okText: "ลบ", okDanger: true });
+  if (!ok) return;
   await deleteDoc(doc(db, currentUser.collection, id));
   showToast("ลบแล้ว");
 };
@@ -673,6 +709,78 @@ function showToast(msg) {
   clearTimeout(window._toastTimer);
   window._toastTimer = setTimeout(() => t.classList.add("hidden"), 2800);
 }
+
+// ── Export / Import Account (ย้ายเครื่อง) ────────────────────────────
+window.doExportAccount = () => {
+  if (!currentUser) return;
+  const users = getUsers();
+  const user  = users[currentUser.username];
+  if (!user) return;
+
+  const payload = btoa(JSON.stringify({ username: currentUser.username, ...user }));
+  // Show in a small prompt-style modal via confirm (reuse confirm overlay as info)
+  document.getElementById("confirm-icon").textContent  = "📤";
+  document.getElementById("confirm-title").textContent = "โค้ดบัญชีของคุณ";
+  document.getElementById("confirm-msg").textContent   = "Copy โค้ดด้านล่างไปวางที่เครื่องใหม่ผ่านปุ่ม "นำเข้าจากเครื่องอื่น"";
+
+  // Inject a textarea inside confirm-msg temporarily
+  const ta = document.createElement("textarea");
+  ta.value = payload;
+  ta.readOnly = true;
+  ta.style.cssText = "width:100%;margin-top:10px;font-size:11px;font-family:monospace;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);resize:none;height:80px";
+  document.getElementById("confirm-msg").appendChild(ta);
+
+  const okBtn = document.getElementById("confirm-ok-btn");
+  okBtn.textContent = "Copy & ปิด";
+  okBtn.className = "btn-primary";
+  document.getElementById("confirm-cancel-btn").style.display = "none";
+  document.getElementById("confirm-overlay").classList.remove("hidden");
+
+  _confirmResolve = () => {
+    navigator.clipboard?.writeText(payload).catch(() => {});
+    document.getElementById("confirm-msg").innerHTML = "";
+    document.getElementById("confirm-cancel-btn").style.display = "";
+    document.getElementById("confirm-overlay").classList.add("hidden");
+    _confirmResolve = null;
+    showToast("Copy โค้ดแล้ว ✓");
+  };
+};
+
+window.doImportAccount = () => {
+  const raw = document.getElementById("import-code").value.trim();
+  const errEl = document.getElementById("import-error");
+  errEl.classList.add("hidden");
+
+  let data;
+  try {
+    data = JSON.parse(atob(raw));
+  } catch {
+    errEl.textContent = "โค้ดไม่ถูกต้อง กรุณาลองใหม่";
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  const { username, passwordHash, pin, apiKey, projectId, appId } = data;
+  if (!username || !passwordHash || !apiKey || !projectId || !appId) {
+    errEl.textContent = "ข้อมูลบัญชีไม่ครบ";
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  const users = getUsers();
+  if (users[username]) {
+    errEl.textContent = `username "${username}" มีอยู่แล้วในเครื่องนี้`;
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  users[username] = { passwordHash, pin, apiKey, projectId, appId };
+  saveUsers(users);
+  closeImportModal();
+  showToast(`นำเข้าบัญชี "${username}" สำเร็จ! กรุณา login`);
+  showScreen("login");
+  document.getElementById("login-username").value = username;
+};
 
 // ── Boot ──────────────────────────────────────────────────────────────
 (function boot() {
